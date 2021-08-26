@@ -56,9 +56,7 @@ class MainActivity : ComponentActivity() {
 
 sealed class Screen(val route: String, @StringRes val resourceId: Int) {
     object Search : Screen("search", R.string.search)
-
     object History : Screen("history", R.string.history)
-
     object Favorites : Screen("favorites", R.string.favorites)
 }
 
@@ -76,17 +74,30 @@ fun mainActivityComposable() {
             BottomNavigation(
                 contentColor = Color(79, 0, 148),
                 backgroundColor = Color.White,
-                ) {
+            ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
                 items.forEach { screen ->
                     BottomNavigationItem(
-                        icon = { Icon(imageVector = when {
-                            screen.resourceId == R.string.search -> Icons.Filled.Search
-                            screen.resourceId == R.string.history -> Icons.Filled.DateRange
-                            screen.resourceId == R.string.favorites -> Icons.Filled.Favorite
-                            else -> Icons.Filled.Check}, contentDescription = null) },
-                        label = { Text(stringResource(screen.resourceId)) },
+                        icon = {
+                            Icon(
+                                imageVector = when {
+                                    screen.resourceId == R.string.search -> Icons.Filled.Search
+                                    screen.resourceId == R.string.history -> Icons.Filled.DateRange
+                                    screen.resourceId == R.string.favorites -> Icons.Filled.Favorite
+                                    else -> Icons.Filled.Check
+                                }, contentDescription = null,
+                                tint = when {
+                                    currentDestination?.hierarchy?.any { it.route == screen.route } == true -> Color(79, 0, 148)
+                                    else -> Color.Gray
+                                }
+                            )
+                        },
+                        label = { Text(stringResource(screen.resourceId),
+                            color = when {
+                                currentDestination?.hierarchy?.any { it.route == screen.route } == true -> Color(79, 0, 148)
+                                else -> Color.Gray
+                        }) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
@@ -114,8 +125,8 @@ fun mainActivityComposable() {
             Modifier.padding(innerPadding)
         ) {
             composable(Screen.Search.route) { SearchComposable() }
-            composable(Screen.History.route) { History() }
-            composable(Screen.Favorites.route) { Favorites() }
+            composable(Screen.History.route) { HistoryComposable() }
+            composable(Screen.Favorites.route) { FavoritesComposable() }
         }
     }
 }
@@ -198,19 +209,18 @@ fun Search() {
             focusedBorderColor = Color(0x00000000),
             textColor = Color(red = 171, green = 171, blue = 171)
         )
-
     )
 }
 
 @Composable
-fun History() {
+fun HistoryComposable() {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = "History Fragment")
     }
 }
 
 @Composable
-fun Favorites() {
+fun FavoritesComposable() {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = "Favorites Fragment")
     }
