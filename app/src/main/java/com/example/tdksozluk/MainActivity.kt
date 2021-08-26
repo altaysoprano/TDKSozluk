@@ -4,6 +4,7 @@ import android.inputmethodservice.Keyboard
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.StringRes
 import androidx.compose.animation.expandVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,35 +29,105 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.tdksozluk.ui.theme.TDKSozlukTheme
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.Navigation.findNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            TDKSozlukTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(color = MaterialTheme.colors.background) {
-                    Greeting()
+            mainActivityComposable()
+        }
+
+    }
+}
+
+sealed class Screen(val route: String, @StringRes val resourceId: Int) {
+    object Search : Screen("search", R.string.search)
+
+    object History : Screen("history", R.string.history)
+
+    object Favorites : Screen("favorites", R.string.favorites)
+}
+
+val items = listOf(
+    Screen.Search,
+    Screen.History,
+    Screen.Favorites
+)
+
+@Composable
+fun mainActivityComposable() {
+    val navController = rememberNavController()
+    Scaffold(
+        bottomBar = {
+            BottomNavigation(
+                contentColor = Color(79, 0, 148),
+                backgroundColor = Color.White,
+                ) {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+                items.forEach { screen ->
+                    BottomNavigationItem(
+                        icon = { Icon(imageVector = when {
+                            screen.resourceId == R.string.search -> Icons.Filled.Search
+                            screen.resourceId == R.string.history -> Icons.Filled.DateRange
+                            screen.resourceId == R.string.favorites -> Icons.Filled.Favorite
+                            else -> Icons.Filled.Check}, contentDescription = null) },
+                        label = { Text(stringResource(screen.resourceId)) },
+                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        onClick = {
+                            navController.navigate(screen.route) {
+                                // Pop up to the start destination of the graph to
+                                // avoid building up a large stack of destinations
+                                // on the back stack as users select items
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                // Avoid multiple copies of the same destination when
+                                // reselecting the same item
+                                launchSingleTop = true
+                                // Restore state when reselecting a previously selected item
+                                restoreState = true
+                            }
+                        }
+                    )
                 }
             }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController,
+            startDestination = Screen.Search.route,
+            Modifier.padding(innerPadding)
+        ) {
+            composable(Screen.Search.route) { SearchComposable() }
+            composable(Screen.History.route) { History() }
+            composable(Screen.Favorites.route) { Favorites() }
         }
     }
 }
 
 @Composable
-fun Greeting() {
+fun SearchComposable() {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
         Row(
             modifier = Modifier
-                .weight(9f)
+                .weight(8f)
                 .background(Color(red = 226, green = 237, blue = 255))
                 .fillMaxSize()
                 .padding(24.dp),
@@ -82,14 +153,6 @@ fun Greeting() {
             {
                 Search()
             }
-        }
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .background(Color.White)
-                .fillMaxSize(),
-        ) {
-            bottomNavigation()
         }
     }
 }
@@ -139,16 +202,34 @@ fun Search() {
     )
 }
 
-val listItems = listOf("Kelime Ara", "Geçmiş", "Favorilerim")
+@Composable
+fun History() {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(text = "History Fragment")
+    }
+}
 
 @Composable
+fun Favorites() {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(text = "Favorites Fragment")
+    }
+}
+
+/* val listItems = listOf("Kelime Ara", "Geçmiş", "Favorilerim")
+
+ @Composable
 fun bottomNavigation() {
+    val navController = rememberNavController()
     var selectedIndex by remember { mutableStateOf(0) }
     BottomNavigation(
         modifier = Modifier.fillMaxSize(),
         contentColor = Color(79, 0, 148),
         backgroundColor = Color.White,
     ) {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
+
         listItems.forEachIndexed { index, label -> //Her bir list elemanı için 1 Bottom Navigation Item oluşturuyoruz.
             BottomNavigationItem(
                 icon = {
@@ -176,16 +257,18 @@ fun bottomNavigation() {
                     )
                 }, //List elemanının label'ı Item'ın label'ı olarak atanıyor.
                 selected = selectedIndex == index, //Item'ın seçili olup olmadığını buradan tespit ediliyor.
-                onClick = { selectedIndex = index }
+                onClick = { selectedIndex = index
+                    navController.navigate(R.layout.fragment_favorites)
+                }
             ) // Bu Item'a tıklandığında bu Item'ın index'i, selectedIndex olarak atanacak.
         }
     }
-}
+} */
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    TDKSozlukTheme {
-        Greeting()
+    Surface {
+        mainActivityComposable()
     }
 }
